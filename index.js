@@ -26,7 +26,7 @@ const db = admin.firestore();
 async function checkUnavailableUsers() {
   try {
     const now = new Date();
-    console.log(`⏱️  Vérification des utilisateurs à ${now.toISOString()} (UTC)`);
+    console.log(`⏱️  Vérification des utilisateurs à ${now.toLocaleString("fr-FR", { timeZone: "Europe/Paris" })}`);
 
     const snapshot = await db.collection("users")
       .where("is_unavailable_active", "==", true)
