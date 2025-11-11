@@ -1,0 +1,26 @@
+name: Check Unavailable Users
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # toutes les heures
+  workflow_dispatch:    # permet de lancer manuellement depuis GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run check-unavailable-users
+      run: node index.js
+      env:
+        FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
