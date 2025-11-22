@@ -1,26 +1,50 @@
-name: Check Unavailable Users
+name: Vérification disponibilité utilisateurs
 
 on:
   schedule:
-    - cron: '0 * * * *'  # toutes les heures
-  workflow_dispatch:    # permet de lancer manuellement depuis GitHub
+    - cron: "0 * * * *" # toutes les heures
+  workflow_dispatch: # permet de lancer manuellement
 
 jobs:
-  build:
+  check-users:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-    - name: Install dependencies
-      run: npm install
+      - name: Installer dépendances
+        run: npm install
 
-    - name: Run check-unavailable-users
-      run: node index.js
-      env:
-        FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Vérifier s'il existe des utilisateurs indisponibles
+        id: check
+        run: |
+          COUNT=$(node - << 'EOF'
+          const admin = require("firebase-admin");
+          const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+          admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+          const db = admin.firestore();
+          db.collection("users").where("statut","==","indisponible").get()
+            .then(snap => console.log(snap.size))
+            .catch(err => { console.error(err); process.exit(1); });
+          EOF
+          )
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Exécuter script SI nécessaire
+        if: ${{ steps.check.outputs.count > 0 }}
+        run: node index.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Aucun utilisateur à vérifier
+        if: ${{ steps.check.outputs.count == 0 }}
+        run: echo "👍 Aucun utilisateur indisponible — routine arrêtée."
