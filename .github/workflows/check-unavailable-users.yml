@@ -1,50 +1,26 @@
-name: Vérification disponibilité utilisateurs
+name: Vérification utilisateurs indisponibles
 
 on:
-  schedule:
-    - cron: "0 * * * *" # toutes les heures
-  workflow_dispatch: # permet de lancer manuellement
+  workflow_dispatch:      # Permet de lancer manuellement
+  repository_dispatch:    # Permet à cron-job.org d'appeler l'URL
+    types: [run-script]
 
 jobs:
-  check-users:
+  run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Setup Node
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
 
-      - name: Installer dépendances
+      - name: Install dependencies
         run: npm install
 
-      - name: Vérifier s'il existe des utilisateurs indisponibles
-        id: check
-        run: |
-          COUNT=$(node - << 'EOF'
-          const admin = require("firebase-admin");
-          const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-          admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-          const db = admin.firestore();
-          db.collection("users").where("statut","==","indisponible").get()
-            .then(snap => console.log(snap.size))
-            .catch(err => { console.error(err); process.exit(1); });
-          EOF
-          )
-          echo "count=$COUNT" >> $GITHUB_OUTPUT
-
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-
-      - name: Exécuter script SI nécessaire
-        if: ${{ steps.check.outputs.count > 0 }}
+      - name: Run script
         run: node index.js
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-
-      - name: Aucun utilisateur à vérifier
-        if: ${{ steps.check.outputs.count == 0 }}
-        run: echo "👍 Aucun utilisateur indisponible — routine arrêtée."
