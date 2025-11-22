@@ -21,7 +21,7 @@ async function checkUnavailableUsers() {
 
   // 🔍 On récupère les utilisateurs dont le statut est "indisponible"
   const snapshot = await db.collection("users")
-    .where("statut", "==", "indisponible")
+    .where("statut", "==", "🛑")
     .get();
 
   if (snapshot.empty) {
@@ -44,7 +44,7 @@ async function checkUnavailableUsers() {
 
     if (endDate < now) {
       await doc.ref.update({
-        statut: "disponible",
+        statut: "🟢",
       });
 
       updatedCount++;
